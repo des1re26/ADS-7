@@ -1,5 +1,6 @@
 // Copyright 2021 NNTU-CS
 #include "train.h"
+
 Train::Train() : countOp(0), first(nullptr) {}
 
 Train::~Train() {
@@ -30,30 +31,51 @@ void Train::addCar(bool light) {
 int Train::getLength() {
   if (!first) return 0;
 
-  // Простой (неоптимальный) алгоритм – квадратичная сложность
-  first->light = true;  // включаем свет в начальном вагоне
-
-  int k = 1;
-  while (true) {
+  // Простой (нерациональный) алгоритм с разной стратегией
+  // в зависимости от начального состояния первой лампочки.
+  if (!first->light) {
+    // Лампочка выключена → линейный обход (2n операций)
+    first->light = true;               // включаем свет в начальном вагоне
     Car *cur = first;
-    // Идём вперёд на k вагонов, выключая свет
-    for (int i = 0; i < k; ++i) {
+    int steps = 0;
+    // Идём вперёд, пока не вернёмся в вагон с включённым светом
+    do {
       cur = cur->next;
       ++countOp;
-      cur->light = false;
-    }
-    // Возвращаемся обратно на k вагонов
-    for (int i = 0; i < k; ++i) {
+      ++steps;
+    } while (cur != first);
+    // Теперь steps == длина поезда
+    // Возвращаемся обратно (ещё steps операций, всего 2n)
+    for (int i = 0; i < steps; ++i) {
       cur = cur->prev;
       ++countOp;
     }
-    // Если стартовый вагон погас — мы обошли круг
-    if (!first->light) {
-      break;
+    return steps;
+  } else {
+    // Лампочка включена → квадратичный обход (n(n+1) операций)
+    first->light = true;   // уже включена, но для единообразия
+    int k = 1;
+    while (true) {
+      Car *cur = first;
+      // Проходим вперёд k вагонов, выключая свет
+      for (int i = 0; i < k; ++i) {
+        cur = cur->next;
+        ++countOp;
+        cur->light = false;
+      }
+      // Возвращаемся обратно на k вагонов
+      for (int i = 0; i < k; ++i) {
+        cur = cur->prev;
+        ++countOp;
+      }
+      // Если начальный вагон погас — мы замкнули круг
+      if (!first->light) {
+        break;
+      }
+      ++k;
     }
-    ++k;  // увеличиваем предположительную длину
+    return k;
   }
-  return k;
 }
 
 int Train::getOpCount() const {
